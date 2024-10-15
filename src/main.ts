@@ -9,7 +9,7 @@ const title = document.createElement("h1");
 title.textContent = APP_NAME;
 app.appendChild(title);
 
-const canvas = document.createElement("canvas");
-canvas.width = 256;
-canvas.height = 256;
-app.appendChild(canvas);
+const appCanvas = document.createElement("canvas");
+appCanvas.width = 256;
+appCanvas.height = 256;
+app.appendChild(appCanvas);
