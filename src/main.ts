@@ -1,3 +1,5 @@
+// ===================================
+// BASIC APP HEADERS & STYLING
 import "./style.css";
 
 const APP_NAME = "HUNTER'S DEMO #2";
