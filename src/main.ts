@@ -13,79 +13,65 @@ app.appendChild(title);
 
 // ===================================
 // INITIALIZATION OF CORE VARIABLES
-const appCanvas = document.createElement("canvas");
-const drawingContext = appCanvas.getContext("2d")!; 
+const canvas = document.createElement("canvas");
+const context = canvas.getContext("2d")!; 
 const clearButton = document.createElement("button");
-let drawingActive = false;
-let lines: Array<Array<{ x: number, y: number }>> = [];
-let currentLine: Array<{ x: number, y: number }> = [];
+let isDrawing = false;
+let paths: Array<Array<{ x: number, y: number }>> = [];
+let currentPath: Array<{ x: number, y: number }> = [];
 
-clearButton.textContent = "Clears the drawing canvas";
-appCanvas.width = 256;
-appCanvas.height = 256;
+clearButton.textContent = "Clear Canvas";
+canvas.width = 256;
+canvas.height = 256;
 
-if (!drawingContext) {
-    throw new Error("Drawing context creation returned NULL object!");
-}
-
-function redrawCanvas() {
-    drawingContext.clearRect(0, 0, appCanvas.width, appCanvas.height);
-    lines.forEach((line) => {
-        drawingContext.beginPath();
-        line.forEach((point, index) => {
-            if (index === 0) {
-                drawingContext.moveTo(point.x, point.y);
-            } else {
-                drawingContext.lineTo(point.x, point.y);
-            }
+function redraw() {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    paths.forEach((path) => {
+        context.beginPath();
+        path.forEach((point, index) => {
+            index === 0 ? context.moveTo(point.x, point.y) : context.lineTo(point.x, point.y);
         });
-        drawingContext.stroke();
-        drawingContext.closePath();
+        context.stroke();
+        context.closePath();
     });
 }
 
 // ===================================
 // ADD EVENT LISTENERS TO PAGE ELEMENTS
-appCanvas.addEventListener("mousedown", (event) => {
-    drawingActive = true;
-    currentLine = [{ x: event.offsetX, y: event.offsetY }];
+canvas.addEventListener("mousedown", (event) => {
+    isDrawing = true;
+    currentPath = [{ x: event.offsetX, y: event.offsetY }];
 });
 
-appCanvas.addEventListener("mousemove", (event) => {
-    if (drawingActive) {
-        const point = { x: event.offsetX, y: event.offsetY };
-        currentLine.push(point);
+canvas.addEventListener("mousemove", (event) => {
+    if (!isDrawing) return;
 
-        const customEvent = new Event("drawing-changed"); 
-        appCanvas.dispatchEvent(customEvent);
-    }
+    const point = { x: event.offsetX, y: event.offsetY };
+    currentPath.push(point);
+    canvas.dispatchEvent(new Event("drawing-changed"));
 });
 
-appCanvas.addEventListener("mouseup", () => {
-    drawingActive = false;
-    if (currentLine.length > 0) {
-        lines.push(currentLine);
-        currentLine = [];
-        
-        const customEvent = new Event("drawing-changed"); 
-        appCanvas.dispatchEvent(customEvent);
+canvas.addEventListener("mouseup", () => {
+    if (currentPath.length) {
+        paths.push(currentPath);
+        currentPath = [];
+        canvas.dispatchEvent(new Event("drawing-changed"));
     }
+    isDrawing = false;
 });
 
 // ===================================
 // OBSERVER FOR "drawing-changed" EVENT
-appCanvas.addEventListener("drawing-changed", () => {
-    redrawCanvas();
-});
+canvas.addEventListener("drawing-changed", redraw);
 
 // ===================================
 // CLEAR BUTTON TO RESET CANVAS
 clearButton.addEventListener("click", () => {
-    lines = [];
-    drawingContext.clearRect(0, 0, appCanvas.width, appCanvas.height);
+    paths = [];
+    context.clearRect(0, 0, canvas.width, canvas.height);
 });
 
 // ===================================
 // MAIN PROGRAM
-app.appendChild(appCanvas);
+app.appendChild(canvas);
 app.appendChild(clearButton);
