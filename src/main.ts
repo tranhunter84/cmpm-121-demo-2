@@ -25,6 +25,7 @@ let activePath: LinePath | null = null;
 let undoHistory: Array<Drawable> = [];
 let redoHistory: Array<Drawable> = [];
 let selectedLineWidth = 1;
+let toolPreview: Drawable | null = null;
 
 clearCanvasButton.textContent = "Clear Canvas";
 undoDrawingButton.textContent = "Undo";
@@ -68,11 +69,27 @@ function createLinePath(startX: number, startY: number, thickness: number): Line
   };
 }
 
+function createToolPreview(x: number, y: number, thickness: number): Drawable {
+  return {
+    render(ctx: CanvasRenderingContext2D) {
+      ctx.beginPath();
+      ctx.arc(x, y, thickness / 2, 0, Math.PI * 2);
+      ctx.strokeStyle = "gray";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.closePath();
+    }
+  };
+}
+
 function refreshCanvas() {
   canvasContext.clearRect(0, 0, canvasElement.width, canvasElement.height);
   drawnPaths.forEach((path) => {
     path.render(canvasContext);
   });
+  if (!isCurrentlyDrawing && toolPreview) {
+    toolPreview.render(canvasContext);
+  }
 }
 
 function updateSelectedTool(button: HTMLButtonElement, thickness: number) {
@@ -86,11 +103,16 @@ function updateSelectedTool(button: HTMLButtonElement, thickness: number) {
 canvasElement.addEventListener("mousedown", (event) => {
   isCurrentlyDrawing = true;
   activePath = createLinePath(event.offsetX, event.offsetY, selectedLineWidth);
+  toolPreview = null;
 });
 
 canvasElement.addEventListener("mousemove", (event) => {
-  if (!isCurrentlyDrawing || !activePath) return;
-  activePath.addPoint(event.offsetX, event.offsetY);
+  if (!isCurrentlyDrawing && toolPreview !== null) {
+    toolPreview = createToolPreview(event.offsetX, event.offsetY, selectedLineWidth);
+  }
+  if (isCurrentlyDrawing && activePath) {
+    activePath.addPoint(event.offsetX, event.offsetY);
+  }
   canvasElement.dispatchEvent(new Event("canvas-updated"));
 });
 
