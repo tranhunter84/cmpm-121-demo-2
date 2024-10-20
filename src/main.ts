@@ -2,144 +2,144 @@ import "./style.css";
 
 // ===================================
 // BASIC APP HEADERS & STYLING
-const APP_NAME = "HUNTER'S DEMO #2!!";
-const app = document.querySelector<HTMLDivElement>("#app")!;
-document.title = APP_NAME;
-const title = document.createElement("h1");
-title.textContent = APP_NAME;
-app.appendChild(title);
+const APP_TITLE = "HUNTER'S DEMO #2!!";
+const appElement = document.querySelector<HTMLDivElement>("#app")!;
+document.title = APP_TITLE;
+const headerElement = document.createElement("h1");
+headerElement.textContent = APP_TITLE;
+appElement.appendChild(headerElement);
 
 // ===================================
-// INITIALIZATION OF CORE VARIABLES
-const canvas = document.createElement("canvas");
-const context = canvas.getContext("2d")!;
-const clearButton = document.createElement("button");
-const undoButton = document.createElement("button");
-const redoButton = document.createElement("button");
-const thinButton = document.createElement("button");
-const thickButton = document.createElement("button");
+// INITIALIZATION OF CORE ELEMENTS
+const canvasElement = document.createElement("canvas");
+const canvasContext = canvasElement.getContext("2d")!;
+const clearCanvasButton = document.createElement("button");
+const undoDrawingButton = document.createElement("button");
+const redoDrawingButton = document.createElement("button");
+const thinMarkerButton = document.createElement("button");
+const thickMarkerButton = document.createElement("button");
 
-let isDrawing = false;
-let paths: Array<DisplayObject> = [];
-let currentPath: LineSegment | null = null;
-let undoStack: Array<DisplayObject> = [];
-let redoStack: Array<DisplayObject> = [];
-let lineThickness = 1;
+let isCurrentlyDrawing = false;
+let drawnPaths: Array<Drawable> = [];
+let activePath: LinePath | null = null;
+let undoHistory: Array<Drawable> = [];
+let redoHistory: Array<Drawable> = [];
+let selectedLineWidth = 1;
 
-clearButton.textContent = "Clear Canvas";
-undoButton.textContent = "Undo";
-redoButton.textContent = "Redo";
-thinButton.textContent = "Thin Marker";
-thickButton.textContent = "Thick Marker";
+clearCanvasButton.textContent = "Clear Canvas";
+undoDrawingButton.textContent = "Undo";
+redoDrawingButton.textContent = "Redo";
+thinMarkerButton.textContent = "Thin Marker";
+thickMarkerButton.textContent = "Thick Marker";
 
-canvas.width = 256;
-canvas.height = 256;
+canvasElement.width = 256;
+canvasElement.height = 256;
 
 // ===================================
 // INTERFACES
-interface DisplayObject {
-display(ctx: CanvasRenderingContext2D): void;
+interface Drawable {
+  render(ctx: CanvasRenderingContext2D): void;
 }
 
-interface LineSegment extends DisplayObject {
-addPoint(x: number, y: number): void;
+interface LinePath extends Drawable {
+  addPoint(x: number, y: number): void;
 }
 
 // ===================================
 // HELPER FUNCTIONS
-function createLineSegment(initialX: number, initialY: number, thickness: number): LineSegment {
-const points: { x: number, y: number }[] = [{ x: initialX, y: initialY }];
+function createLinePath(startX: number, startY: number, thickness: number): LinePath {
+  const points: { x: number, y: number }[] = [{ x: startX, y: startY }];
 
-return {
-addPoint(x: number, y: number) {
-points.push({ x, y });
-},
-display(ctx: CanvasRenderingContext2D) {
-if (points.length < 2) return;
-ctx.beginPath();
-ctx.moveTo(points[0].x, points[0].y);
-for (const point of points) {
-ctx.lineTo(point.x, point.y);
-}
-ctx.lineWidth = thickness;
-ctx.stroke();
-ctx.closePath();
-}
-};
-}
-
-function redraw() {
-context.clearRect(0, 0, canvas.width, canvas.height);
-paths.forEach((path) => {
-path.display(context);
-});
+  return {
+    addPoint(x: number, y: number) {
+      points.push({ x, y });
+    },
+    render(ctx: CanvasRenderingContext2D) {
+      if (points.length < 2) return;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (const point of points) {
+        ctx.lineTo(point.x, point.y);
+      }
+      ctx.lineWidth = thickness;
+      ctx.stroke();
+      ctx.closePath();
+    }
+  };
 }
 
-function selectTool(button: HTMLButtonElement, thickness: number) {
-lineThickness = thickness;
-document.querySelectorAll(".selectedTool").forEach(btn => btn.classList.remove("selectedTool"));
-button.classList.add("selectedTool");
+function refreshCanvas() {
+  canvasContext.clearRect(0, 0, canvasElement.width, canvasElement.height);
+  drawnPaths.forEach((path) => {
+    path.render(canvasContext);
+  });
+}
+
+function updateSelectedTool(button: HTMLButtonElement, thickness: number) {
+  selectedLineWidth = thickness;
+  document.querySelectorAll(".selectedTool").forEach(btn => btn.classList.remove("selectedTool"));
+  button.classList.add("selectedTool");
 }
 
 // ===================================
-// ADD EVENT LISTENERS TO PAGE ELEMENTS
-canvas.addEventListener("mousedown", (event) => {
-isDrawing = true;
-currentPath = createLineSegment(event.offsetX, event.offsetY, lineThickness);
+// EVENT LISTENERS
+canvasElement.addEventListener("mousedown", (event) => {
+  isCurrentlyDrawing = true;
+  activePath = createLinePath(event.offsetX, event.offsetY, selectedLineWidth);
 });
 
-canvas.addEventListener("mousemove", (event) => {
-if (!isDrawing || !currentPath) return;
-currentPath.addPoint(event.offsetX, event.offsetY);
-canvas.dispatchEvent(new Event("drawing-changed"));
+canvasElement.addEventListener("mousemove", (event) => {
+  if (!isCurrentlyDrawing || !activePath) return;
+  activePath.addPoint(event.offsetX, event.offsetY);
+  canvasElement.dispatchEvent(new Event("canvas-updated"));
 });
 
-canvas.addEventListener("mouseup", () => {
-if (currentPath) {
-paths.push(currentPath);
-currentPath = null;
-redoStack = [];
-canvas.dispatchEvent(new Event("drawing-changed"));
-}
-isDrawing = false;
+canvasElement.addEventListener("mouseup", () => {
+  if (activePath) {
+    drawnPaths.push(activePath);
+    activePath = null;
+    redoHistory = [];
+    canvasElement.dispatchEvent(new Event("canvas-updated"));
+  }
+  isCurrentlyDrawing = false;
 });
 
-canvas.addEventListener("drawing-changed", redraw);
+canvasElement.addEventListener("canvas-updated", refreshCanvas);
 
-undoButton.addEventListener("click", () => {
-if (paths.length > 0) {
-const lastPath = paths.pop();
-if (lastPath) undoStack.push(lastPath);
-canvas.dispatchEvent(new Event("drawing-changed"));
-}
+undoDrawingButton.addEventListener("click", () => {
+  if (drawnPaths.length > 0) {
+    const lastPath = drawnPaths.pop();
+    if (lastPath) undoHistory.push(lastPath);
+    canvasElement.dispatchEvent(new Event("canvas-updated"));
+  }
 });
 
-redoButton.addEventListener("click", () => {
-if (undoStack.length > 0) {
-const lastUndo = undoStack.pop();
-if (lastUndo) {
-paths.push(lastUndo);
-redoStack.push(lastUndo);
-}
-canvas.dispatchEvent(new Event("drawing-changed"));
-}
+redoDrawingButton.addEventListener("click", () => {
+  if (undoHistory.length > 0) {
+    const lastUndo = undoHistory.pop();
+    if (lastUndo) {
+      drawnPaths.push(lastUndo);
+      redoHistory.push(lastUndo);
+    }
+    canvasElement.dispatchEvent(new Event("canvas-updated"));
+  }
 });
 
-clearButton.addEventListener("click", () => {
-paths = [];
-undoStack = [];
-redoStack = [];
-context.clearRect(0, 0, canvas.width, canvas.height);
+clearCanvasButton.addEventListener("click", () => {
+  drawnPaths = [];
+  undoHistory = [];
+  redoHistory = [];
+  canvasContext.clearRect(0, 0, canvasElement.width, canvasElement.height);
 });
 
-thinButton.addEventListener("click", () => selectTool(thinButton, 1));
-thickButton.addEventListener("click", () => selectTool(thickButton, 5));
+thinMarkerButton.addEventListener("click", () => updateSelectedTool(thinMarkerButton, 1));
+thickMarkerButton.addEventListener("click", () => updateSelectedTool(thickMarkerButton, 5));
 
 // ===================================
 // MAIN PROGRAM
-app.appendChild(canvas);
-app.appendChild(undoButton);
-app.appendChild(redoButton);
-app.appendChild(clearButton);
-app.appendChild(thinButton);
-app.appendChild(thickButton);
+appElement.appendChild(canvasElement);
+appElement.appendChild(undoDrawingButton);
+appElement.appendChild(redoDrawingButton);
+appElement.appendChild(clearCanvasButton);
+appElement.appendChild(thinMarkerButton);
+appElement.appendChild(thickMarkerButton);
