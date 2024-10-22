@@ -18,6 +18,9 @@ const undoButton = document.createElement("button");
 const redoButton = document.createElement("button");
 const thinButton = document.createElement("button");
 const thickButton = document.createElement("button");
+const smile1Button = document.createElement("button");
+const smile2Button = document.createElement("button");
+const smile3Button = document.createElement("button");
 
 let isDrawing = false;
 let paths: Array<DisplayObject> = [];
@@ -26,12 +29,17 @@ let undoStack: Array<DisplayObject> = [];
 let redoStack: Array<DisplayObject> = [];
 let lineThickness = 1;
 let toolPreview: ToolPreview | null = null;
+let currentSticker: Sticker | null = null;
+let currentTool: "draw" | "sticker" = "draw";
 
 clearButton.textContent = "Clear Canvas";
 undoButton.textContent = "Undo";
 redoButton.textContent = "Redo";
 thinButton.textContent = "Thin Marker";
 thickButton.textContent = "Thick Marker";
+smile1Button.textContent = "☺️";
+smile2Button.textContent = "😊";
+smile3Button.textContent = "😄";
 
 canvas.width = 256;
 canvas.height = 256;
@@ -98,6 +106,28 @@ class ToolPreview implements DisplayObject {
     }
 }
 
+class Sticker implements DisplayObject {
+    private x: number;
+    private y: number;
+    private emoji: string;
+
+    constructor(x: number, y: number, emoji: string) {
+        this.x = x;
+        this.y = y;
+        this.emoji = emoji;
+    }
+
+    updatePosition(x: number, y: number) {
+        this.x = x;
+        this.y = y;
+    }
+
+    display(ctx: CanvasRenderingContext2D): void {
+        ctx.font = "30px Arial";
+        ctx.fillText(this.emoji, this.x - 15, this.y + 10);  // Adjust the positioning to center
+    }
+}
+
 // ===================================
 // HELPER FUNCTIONS
 function createLineSegment(initialX: number, initialY: number, thickness: number): LineSegment {
@@ -106,6 +136,10 @@ function createLineSegment(initialX: number, initialY: number, thickness: number
 
 function createToolPreview(initialX: number, initialY: number, thickness: number): ToolPreview {
     return new ToolPreview(initialX, initialY, thickness);
+}
+
+function createSticker(x: number, y: number, emoji: string): Sticker {
+    return new Sticker(x, y, emoji);
 }
 
 function redraw() {
@@ -118,33 +152,51 @@ function redraw() {
     if (!isDrawing && toolPreview) {
         toolPreview.display(context);
     }
+    if (currentSticker) {
+        currentSticker.display(context);
+    }
 }
 
 function selectTool(button: HTMLButtonElement, thickness: number) {
+    currentTool = "draw";
     lineThickness = thickness;
+    toolPreview = createToolPreview(0, 0, lineThickness);
     document.querySelectorAll(".selectedTool").forEach(btn => btn.classList.remove("selectedTool"));
     button.classList.add("selectedTool");
+}
+
+function selectSticker(emoji: string) {
+    currentTool = "sticker";
+    currentSticker = createSticker(0, 0, emoji);
+    toolPreview = null; // No drawing tool preview when using stickers
 }
 
 // ===================================
 // ADD EVENT LISTENERS TO PAGE ELEMENTS
 canvas.addEventListener("mousedown", (event) => {
-    isDrawing = true;
-    currentPath = createLineSegment(event.offsetX, event.offsetY, lineThickness);
-    toolPreview = null; // Hide tool preview while drawing
+    if (currentTool === "draw") {
+        isDrawing = true;
+        currentPath = createLineSegment(event.offsetX, event.offsetY, lineThickness);
+        toolPreview = null; // Hide tool preview while drawing
+    } else if (currentTool === "sticker" && currentSticker) {
+        currentSticker.updatePosition(event.offsetX, event.offsetY);
+        paths.push(currentSticker);
+        currentSticker = null;
+    }
 });
 
 canvas.addEventListener("mousemove", (event) => {
-    if (!isDrawing) {
-        // Update the tool preview's position
+    if (!isDrawing && currentTool === "draw") {
         if (!toolPreview) {
             toolPreview = createToolPreview(event.offsetX, event.offsetY, lineThickness);
         } else {
             toolPreview.updatePosition(event.offsetX, event.offsetY);
         }
         canvas.dispatchEvent(new Event("tool-moved"));
-    } else if (currentPath) {
-        // Add point to the current path when drawing
+    } else if (!isDrawing && currentTool === "sticker" && currentSticker) {
+        currentSticker.updatePosition(event.offsetX, event.offsetY);
+        canvas.dispatchEvent(new Event("tool-moved"));
+    } else if (isDrawing && currentPath) {
         currentPath.addPoint(event.offsetX, event.offsetY);
         canvas.dispatchEvent(new Event("drawing-changed"));
     }
@@ -161,15 +213,13 @@ canvas.addEventListener("mouseup", () => {
 });
 
 canvas.addEventListener("drawing-changed", redraw);
-
-// Add the "tool-moved" event listener to trigger a redraw for tool preview
 canvas.addEventListener("tool-moved", redraw);
 
 undoButton.addEventListener("click", () => {
     if (paths.length > 0) {
         const lastPath = paths.pop();
         if (lastPath) undoStack.push(lastPath);
-            canvas.dispatchEvent(new Event("drawing-changed"));
+        canvas.dispatchEvent(new Event("drawing-changed"));
     }
 });
 
@@ -194,6 +244,10 @@ clearButton.addEventListener("click", () => {
 thinButton.addEventListener("click", () => selectTool(thinButton, 1));
 thickButton.addEventListener("click", () => selectTool(thickButton, 5));
 
+smile1Button.addEventListener("click", () => selectSticker("☺️"));
+smile2Button.addEventListener("click", () => selectSticker("😊"));
+smile3Button.addEventListener("click", () => selectSticker("😄"));
+
 // ===================================
 // MAIN PROGRAM
 app.appendChild(canvas);
@@ -202,6 +256,8 @@ app.appendChild(redoButton);
 app.appendChild(clearButton);
 app.appendChild(thinButton);
 app.appendChild(thickButton);
+app.appendChild(smile1Button);
+app.appendChild(smile2Button);
+app.appendChild(smile3Button);
 
-// Create the initial tool preview object when the app starts
-toolPreview = createToolPreview(0, 0, lineThickness);
+toolPreview = createToolPreview(0, 0, lineThickness);   // Create the initial tool preview object when the app starts
