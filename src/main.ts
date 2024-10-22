@@ -35,42 +35,77 @@ thickButton.textContent = "Thick Marker";
 
 canvas.width = 256;
 canvas.height = 256;
+canvas.style.cursor = "none"; // Hide the default cursor
 
 // ===================================
 // INTERFACES
 interface DisplayObject {
-display(ctx: CanvasRenderingContext2D): void;
+    display(ctx: CanvasRenderingContext2D): void;
 }
 
-interface LineSegment extends DisplayObject {
-addPoint(x: number, y: number): void;
+// ===================================
+// CLASSES
+class LineSegment implements DisplayObject {
+    private points: { x: number, y: number }[];
+    private thickness: number;
+
+    constructor(initialX: number, initialY: number, thickness: number) {
+        this.points = [{ x: initialX, y: initialY }];
+        this.thickness = thickness;
+    }
+
+    addPoint(x: number, y: number) {
+        this.points.push({ x, y });
+    }
+
+    display(ctx: CanvasRenderingContext2D): void {
+        if (this.points.length < 2) return;
+        ctx.beginPath();
+        ctx.moveTo(this.points[0].x, this.points[0].y);
+        for (const point of this.points) {
+            ctx.lineTo(point.x, point.y);
+        }
+        ctx.lineWidth = this.thickness;
+        ctx.stroke();
+        ctx.closePath();
+    }
 }
 
-interface ToolPreview extends DisplayObject {
-    updatePosition(x: number, y: number): void;
+class ToolPreview implements DisplayObject {
+    private x: number;
+    private y: number;
+    private thickness: number;
+
+    constructor(x: number, y: number, thickness: number) {
+        this.x = x;
+        this.y = y;
+        this.thickness = thickness;
+    }
+
+    updatePosition(x: number, y: number) {
+        this.x = x;
+        this.y = y;
+    }
+
+    display(ctx: CanvasRenderingContext2D): void {
+        const previewSize = this.thickness * 4; // Make the preview 4 times the thickness
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, previewSize / 2, 0, Math.PI * 2);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = "black";
+        ctx.stroke();
+        ctx.closePath();
+    }
 }
 
 // ===================================
 // HELPER FUNCTIONS
 function createLineSegment(initialX: number, initialY: number, thickness: number): LineSegment {
-    const points: { x: number, y: number }[] = [{ x: initialX, y: initialY }];
+    return new LineSegment(initialX, initialY, thickness);
+}
 
-    return {
-        addPoint(x: number, y: number) {
-            points.push({ x, y });
-        },
-        display(ctx: CanvasRenderingContext2D) {
-            if (points.length < 2) return;
-            ctx.beginPath();
-            ctx.moveTo(points[0].x, points[0].y);
-            for (const point of points) {
-                ctx.lineTo(point.x, point.y);
-            }
-            ctx.lineWidth = thickness;
-            ctx.stroke();
-            ctx.closePath();
-        }
-    };
+function createToolPreview(initialX: number, initialY: number, thickness: number): ToolPreview {
+    return new ToolPreview(initialX, initialY, thickness);
 }
 
 function redraw() {
@@ -78,6 +113,11 @@ function redraw() {
     paths.forEach((path) => {
         path.display(context);
     });
+
+    // Draw the tool preview only if not drawing and preview exists
+    if (!isDrawing && toolPreview) {
+        toolPreview.display(context);
+    }
 }
 
 function selectTool(button: HTMLButtonElement, thickness: number) {
@@ -91,12 +131,23 @@ function selectTool(button: HTMLButtonElement, thickness: number) {
 canvas.addEventListener("mousedown", (event) => {
     isDrawing = true;
     currentPath = createLineSegment(event.offsetX, event.offsetY, lineThickness);
+    toolPreview = null; // Hide tool preview while drawing
 });
 
 canvas.addEventListener("mousemove", (event) => {
-    if (!isDrawing || !currentPath) return;
-    currentPath.addPoint(event.offsetX, event.offsetY);
-    canvas.dispatchEvent(new Event("drawing-changed"));
+    if (!isDrawing) {
+        // Update the tool preview's position
+        if (!toolPreview) {
+            toolPreview = createToolPreview(event.offsetX, event.offsetY, lineThickness);
+        } else {
+            toolPreview.updatePosition(event.offsetX, event.offsetY);
+        }
+        canvas.dispatchEvent(new Event("tool-moved"));
+    } else if (currentPath) {
+        // Add point to the current path when drawing
+        currentPath.addPoint(event.offsetX, event.offsetY);
+        canvas.dispatchEvent(new Event("drawing-changed"));
+    }
 });
 
 canvas.addEventListener("mouseup", () => {
@@ -110,6 +161,9 @@ canvas.addEventListener("mouseup", () => {
 });
 
 canvas.addEventListener("drawing-changed", redraw);
+
+// Add the "tool-moved" event listener to trigger a redraw for tool preview
+canvas.addEventListener("tool-moved", redraw);
 
 undoButton.addEventListener("click", () => {
     if (paths.length > 0) {
@@ -148,3 +202,6 @@ app.appendChild(redoButton);
 app.appendChild(clearButton);
 app.appendChild(thinButton);
 app.appendChild(thickButton);
+
+// Create the initial tool preview object when the app starts
+toolPreview = createToolPreview(0, 0, lineThickness);
