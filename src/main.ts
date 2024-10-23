@@ -18,7 +18,7 @@ let undoStack: Array<DisplayObject> = [];
 let redoStack: Array<DisplayObject> = [];
 let lineThickness = 1;
 let toolPreview: ToolPreview | null = null;
-let currentSticker: Sticker | null = null;
+let currentEmoji: Emoji | null = null;
 let currentTool: "draw" | "sticker" = "draw";
 
 const canvas = document.createElement("canvas");
@@ -28,12 +28,12 @@ const undoButton = document.createElement("button");
 const redoButton = document.createElement("button");
 const thinButton = document.createElement("button");
 const thickButton = document.createElement("button");
-const createStickerButton = document.createElement("button");
+const createEmojiButton = document.createElement("button");
 const exportButton = document.createElement("button");
-const emojiStickers = [
-    { emoji: "☺️", label: "Smile 1" },
-    { emoji: "😊", label: "Smile 2" },
-    { emoji: "😄", label: "Smile 3" }
+const emojiButtons = [
+    { emoji: "🍎", label: "Smile 1" },
+    { emoji: "🍌", label: "Smile 2" },
+    { emoji: "🍉", label: "Smile 3" }
 ];
 
 clearButton.textContent = "Clear Canvas";
@@ -41,7 +41,7 @@ undoButton.textContent = "Undo";
 redoButton.textContent = "Redo";
 thinButton.textContent = "Thin Marker";
 thickButton.textContent = "Thick Marker";
-createStickerButton.textContent = "Create Your Own Sticker!";
+createEmojiButton.textContent = "Create Your Own Emoji!";
 exportButton.textContent = "Export Canvas (PNG)";
 
 canvas.width = 256;
@@ -109,7 +109,7 @@ class ToolPreview implements DisplayObject {
     }
 }
 
-class Sticker implements DisplayObject {
+class Emoji implements DisplayObject {
     private x: number;
     private y: number;
     private emoji: string;
@@ -141,8 +141,8 @@ function createToolPreview(initialX: number, initialY: number, thickness: number
     return new ToolPreview(initialX, initialY, thickness);
 }
 
-function createSticker(x: number, y: number, emoji: string): Sticker {
-    return new Sticker(x, y, emoji);
+function createEmoji(x: number, y: number, emoji: string): Emoji {
+    return new Emoji(x, y, emoji);
 }
 
 function redraw() {
@@ -154,8 +154,8 @@ function redraw() {
     if (!isDrawing && toolPreview) {
         toolPreview.display(context);
     }
-    if (currentSticker) {
-        currentSticker.display(context);
+    if (currentEmoji) {
+        currentEmoji.display(context);
     }
 }
 
@@ -167,9 +167,9 @@ function selectTool(button: HTMLButtonElement, thickness: number) {
     button.classList.add("selectedTool");
 }
 
-function selectSticker(emoji: string) {
+function selectEmoji(emoji: string) {
     currentTool = "sticker";
-    currentSticker = createSticker(0, 0, emoji);
+    currentEmoji = createEmoji(0, 0, emoji);
     toolPreview = null; // No drawing tool preview when using stickers
 }
 
@@ -204,10 +204,10 @@ canvas.addEventListener("mousedown", (event) => {
         isDrawing = true;
         currentPath = createLineSegment(event.offsetX, event.offsetY, lineThickness);
         toolPreview = null; // Hide tool preview while drawing
-    } else if (currentTool === "sticker" && currentSticker) {
-        currentSticker.updatePosition(event.offsetX, event.offsetY);
-        paths.push(currentSticker);
-        currentSticker = null;
+    } else if (currentTool === "sticker" && currentEmoji) {
+        currentEmoji.updatePosition(event.offsetX, event.offsetY);
+        paths.push(currentEmoji);
+        currentEmoji = null;
     }
 });
 
@@ -219,8 +219,8 @@ canvas.addEventListener("mousemove", (event) => {
             toolPreview.updatePosition(event.offsetX, event.offsetY);
         }
         canvas.dispatchEvent(new Event("tool-moved"));
-    } else if (!isDrawing && currentTool === "sticker" && currentSticker) {
-        currentSticker.updatePosition(event.offsetX, event.offsetY);
+    } else if (!isDrawing && currentTool === "sticker" && currentEmoji) {
+        currentEmoji.updatePosition(event.offsetX, event.offsetY);
         canvas.dispatchEvent(new Event("tool-moved"));
     } else if (isDrawing && currentPath) {
         currentPath.addPoint(event.offsetX, event.offsetY);
@@ -267,24 +267,24 @@ clearButton.addEventListener("click", () => {
     context.clearRect(0, 0, canvas.width, canvas.height);
 });
 
-thinButton.addEventListener("click", () => selectTool(thinButton, 1));
-thickButton.addEventListener("click", () => selectTool(thickButton, 5));
+thinButton.addEventListener("click", () => selectTool(thinButton, 2));
+thickButton.addEventListener("click", () => selectTool(thickButton, 10));
 
-createStickerButton.addEventListener("click", () => {   // Button for user to create a sticker
-    const emoji = prompt("Input your own emoji to create a new sticker:", "😎");    // Ensure a real emoji character is pasted in
+createEmojiButton.addEventListener("click", () => {   // Button for user to create a emoji
+    const emoji = prompt("Input your own emoji to create a new emoji:", "😎");    // Ensure a real emoji character is pasted in
     if (emoji) {
         const button = document.createElement("button");
         button.textContent = emoji;
-        button.addEventListener("click", () => selectSticker(emoji));
+        button.addEventListener("click", () => selectEmoji(emoji));
         app.appendChild(button);
     }
 });
 
 // Create buttons dynamically
-emojiStickers.forEach(sticker => {
+emojiButtons.forEach(emoji => {
     const button = document.createElement("button");
-    button.textContent = sticker.emoji;
-    button.addEventListener("click", () => selectSticker(sticker.emoji));
+    button.textContent = emoji.emoji;
+    button.addEventListener("click", () => selectEmoji(emoji.emoji));
     app.appendChild(button);
 });
 
@@ -298,7 +298,7 @@ app.appendChild(redoButton);
 app.appendChild(clearButton);
 app.appendChild(thinButton);
 app.appendChild(thickButton);
-app.appendChild(createStickerButton);
+app.appendChild(createEmojiButton);
 app.appendChild(exportButton);
 
 toolPreview = createToolPreview(0, 0, lineThickness);   // Create the initial tool preview object when the app starts
