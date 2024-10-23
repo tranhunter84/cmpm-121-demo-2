@@ -11,17 +11,6 @@ app.appendChild(title);
 
 // ===================================
 // INITIALIZATION OF CORE VARIABLES
-const canvas = document.createElement("canvas");
-const context = canvas.getContext("2d")!;
-const clearButton = document.createElement("button");
-const undoButton = document.createElement("button");
-const redoButton = document.createElement("button");
-const thinButton = document.createElement("button");
-const thickButton = document.createElement("button");
-const smile1Button = document.createElement("button");
-const smile2Button = document.createElement("button");
-const smile3Button = document.createElement("button");
-
 let isDrawing = false;
 let paths: Array<DisplayObject> = [];
 let currentPath: LineSegment | null = null;
@@ -32,14 +21,28 @@ let toolPreview: ToolPreview | null = null;
 let currentSticker: Sticker | null = null;
 let currentTool: "draw" | "sticker" = "draw";
 
+const canvas = document.createElement("canvas");
+const context = canvas.getContext("2d")!;
+const clearButton = document.createElement("button");
+const undoButton = document.createElement("button");
+const redoButton = document.createElement("button");
+const thinButton = document.createElement("button");
+const thickButton = document.createElement("button");
+const createStickerButton = document.createElement("button");
+const exportButton = document.createElement("button");
+const emojiStickers = [
+    { emoji: "☺️", label: "Smile 1" },
+    { emoji: "😊", label: "Smile 2" },
+    { emoji: "😄", label: "Smile 3" }
+];
+
 clearButton.textContent = "Clear Canvas";
 undoButton.textContent = "Undo";
 redoButton.textContent = "Redo";
 thinButton.textContent = "Thin Marker";
 thickButton.textContent = "Thick Marker";
-smile1Button.textContent = "☺️";
-smile2Button.textContent = "😊";
-smile3Button.textContent = "😄";
+createStickerButton.textContent = "Create Your Own Sticker!";
+exportButton.textContent = "Export Canvas (PNG)";
 
 canvas.width = 256;
 canvas.height = 256;
@@ -148,7 +151,6 @@ function redraw() {
         path.display(context);
     });
 
-    // Draw the tool preview only if not drawing and preview exists
     if (!isDrawing && toolPreview) {
         toolPreview.display(context);
     }
@@ -169,6 +171,30 @@ function selectSticker(emoji: string) {
     currentTool = "sticker";
     currentSticker = createSticker(0, 0, emoji);
     toolPreview = null; // No drawing tool preview when using stickers
+}
+
+function exportCanvas() {
+    const tempCanvas = document.createElement("canvas");  // Temporary canvas sized 1024x204
+    const exportContext = tempCanvas.getContext("2d")!;
+    
+    tempCanvas.width = 1024;
+    tempCanvas.height = 1024;
+    exportContext.scale(4, 4);
+
+    paths.forEach((path) => {   // Redraws paths onto the temp canvas
+        path.display(exportContext);
+    });
+
+    tempCanvas.toBlob((blob) => {   // Trigger the download
+        if (blob) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "canvas-export.png";
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+    });
 }
 
 // ===================================
@@ -244,9 +270,25 @@ clearButton.addEventListener("click", () => {
 thinButton.addEventListener("click", () => selectTool(thinButton, 1));
 thickButton.addEventListener("click", () => selectTool(thickButton, 5));
 
-smile1Button.addEventListener("click", () => selectSticker("☺️"));
-smile2Button.addEventListener("click", () => selectSticker("😊"));
-smile3Button.addEventListener("click", () => selectSticker("😄"));
+createStickerButton.addEventListener("click", () => {   // Button for user to create a sticker
+    const emoji = prompt("Input your own emoji to create a new sticker:", "😎");
+    if (emoji) {
+        const button = document.createElement("button");
+        button.textContent = emoji;
+        button.addEventListener("click", () => selectSticker(emoji));
+        app.appendChild(button);
+    }
+});
+
+// Create buttons dynamically
+emojiStickers.forEach(sticker => {
+    const button = document.createElement("button");
+    button.textContent = sticker.emoji;
+    button.addEventListener("click", () => selectSticker(sticker.emoji));
+    app.appendChild(button);
+});
+
+exportButton.addEventListener("click", exportCanvas);
 
 // ===================================
 // MAIN PROGRAM
@@ -256,8 +298,7 @@ app.appendChild(redoButton);
 app.appendChild(clearButton);
 app.appendChild(thinButton);
 app.appendChild(thickButton);
-app.appendChild(smile1Button);
-app.appendChild(smile2Button);
-app.appendChild(smile3Button);
+app.appendChild(createStickerButton);
+app.appendChild(exportButton);
 
 toolPreview = createToolPreview(0, 0, lineThickness);   // Create the initial tool preview object when the app starts
