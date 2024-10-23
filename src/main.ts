@@ -59,10 +59,12 @@ interface DisplayObject {
 class LineSegment implements DisplayObject {
     private points: { x: number, y: number }[];
     private thickness: number;
+    private color: string;  // New property
 
-    constructor(initialX: number, initialY: number, thickness: number) {
+    constructor(initialX: number, initialY: number, thickness: number, color: string) {
         this.points = [{ x: initialX, y: initialY }];
         this.thickness = thickness;
+        this.color = color;  // Initialize color
     }
 
     addPoint(x: number, y: number) {
@@ -77,6 +79,7 @@ class LineSegment implements DisplayObject {
             ctx.lineTo(point.x, point.y);
         }
         ctx.lineWidth = this.thickness;
+        ctx.strokeStyle = this.color;  // Set stroke color
         ctx.stroke();
         ctx.closePath();
     }
@@ -86,11 +89,13 @@ class ToolPreview implements DisplayObject {
     private x: number;
     private y: number;
     private thickness: number;
+    private color: string;  // New color property
 
-    constructor(x: number, y: number, thickness: number) {
+    constructor(x: number, y: number, thickness: number, color: string) {
         this.x = x;
         this.y = y;
         this.thickness = thickness;
+        this.color = color;  // Initialize with the passed color
     }
 
     updatePosition(x: number, y: number) {
@@ -103,7 +108,7 @@ class ToolPreview implements DisplayObject {
         ctx.beginPath();
         ctx.arc(this.x, this.y, previewSize / 2, 0, Math.PI * 2);
         ctx.lineWidth = 1;
-        ctx.strokeStyle = "black";
+        ctx.strokeStyle = this.color;  // Use the tool's color for the preview
         ctx.stroke();
         ctx.closePath();
     }
@@ -134,11 +139,12 @@ class Emoji implements DisplayObject {
 // ===================================
 // HELPER FUNCTIONS
 function createLineSegment(initialX: number, initialY: number, thickness: number): LineSegment {
-    return new LineSegment(initialX, initialY, thickness);
+    const color = `hsl(${Math.random() * 360}, 100%, 50%)`;  // Randomize color using HSL
+    return new LineSegment(initialX, initialY, thickness, color);
 }
 
-function createToolPreview(initialX: number, initialY: number, thickness: number): ToolPreview {
-    return new ToolPreview(initialX, initialY, thickness);
+function createToolPreview(initialX: number, initialY: number, thickness: number, color: string): ToolPreview {
+    return new ToolPreview(initialX, initialY, thickness, color);  // Pass color to ToolPreview
 }
 
 function createEmoji(x: number, y: number, emoji: string): Emoji {
@@ -162,7 +168,9 @@ function redraw() {
 function selectTool(button: HTMLButtonElement, thickness: number) {
     currentTool = "draw";
     lineThickness = thickness;
-    toolPreview = createToolPreview(0, 0, lineThickness);
+    const randomColor = `hsl(${Math.random() * 360}, 100%, 50%)`; // Randomize the color
+    toolPreview = createToolPreview(0, 0, lineThickness, randomColor); // Pass random color
+    context.strokeStyle = randomColor; // Set random color for the drawing tool
     document.querySelectorAll(".selectedTool").forEach(btn => btn.classList.remove("selectedTool"));
     button.classList.add("selectedTool");
 }
@@ -267,8 +275,15 @@ clearButton.addEventListener("click", () => {
     context.clearRect(0, 0, canvas.width, canvas.height);
 });
 
-thinButton.addEventListener("click", () => selectTool(thinButton, 2));
-thickButton.addEventListener("click", () => selectTool(thickButton, 10));
+thinButton.addEventListener("click", () => {
+    const randomColor = `hsl(${Math.random() * 360}, 100%, 50%)`;  // Random color
+    selectTool(thinButton, 2);  // Apply random color to the tool
+});
+
+thickButton.addEventListener("click", () => {
+    const randomColor = `hsl(${Math.random() * 360}, 100%, 50%)`;  // Random color
+    selectTool(thickButton, 10);
+});
 
 createEmojiButton.addEventListener("click", () => {   // Button for user to create a emoji
     const emoji = prompt("Input your own emoji to create a new emoji:", "😎");    // Ensure a real emoji character is pasted in
@@ -301,4 +316,4 @@ app.appendChild(thickButton);
 app.appendChild(createEmojiButton);
 app.appendChild(exportButton);
 
-toolPreview = createToolPreview(0, 0, lineThickness);   // Create the initial tool preview object when the app starts
+toolPreview = createToolPreview(0, 0, lineThickness);   // Create the initial tool preview object when the app starts	
