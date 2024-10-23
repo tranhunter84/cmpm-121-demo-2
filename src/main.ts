@@ -271,7 +271,7 @@ thinButton.addEventListener("click", () => selectTool(thinButton, 1));
 thickButton.addEventListener("click", () => selectTool(thickButton, 5));
 
 createStickerButton.addEventListener("click", () => {   // Button for user to create a sticker
-    const emoji = prompt("Input your own emoji to create a new sticker:", "😎");
+    const emoji = prompt("Input your own emoji to create a new sticker:", "😎");    // Ensure a real emoji character is pasted in
     if (emoji) {
         const button = document.createElement("button");
         button.textContent = emoji;
