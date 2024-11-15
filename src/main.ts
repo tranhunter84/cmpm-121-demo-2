@@ -1,4 +1,8 @@
 import "./style.css";
+import DisplayObject from "./displayobject";
+import { LineSegment } from "./lineSegment";
+import { ToolPreview } from "./tool";
+import { Emoji } from "./emoji";
 
 // ===================================
 // BASIC APP HEADERS & STYLING
@@ -47,94 +51,6 @@ exportButton.textContent = "Export Canvas (PNG)";
 canvas.width = 256;
 canvas.height = 256;
 canvas.style.cursor = "none"; // Hide the default cursor
-
-// ===================================
-// INTERFACES
-interface DisplayObject {
-    display(ctx: CanvasRenderingContext2D): void;
-}
-
-// ===================================
-// CLASSES
-class LineSegment implements DisplayObject {
-    private points: { x: number, y: number }[];
-    private thickness: number;
-    private color: string;  // New property
-
-    constructor(initialX: number, initialY: number, thickness: number, color: string) {
-        this.points = [{ x: initialX, y: initialY }];
-        this.thickness = thickness;
-        this.color = color;  // Initialize color
-    }
-
-    addPoint(x: number, y: number) {
-        this.points.push({ x, y });
-    }
-
-    display(ctx: CanvasRenderingContext2D): void {
-        if (this.points.length < 2) return;
-        ctx.beginPath();
-        ctx.moveTo(this.points[0].x, this.points[0].y);
-        for (const point of this.points) {
-            ctx.lineTo(point.x, point.y);
-        }
-        ctx.lineWidth = this.thickness;
-        ctx.strokeStyle = this.color;  // Set stroke color
-        ctx.stroke();
-        ctx.closePath();
-    }
-}
-
-class ToolPreview implements DisplayObject {
-    private x: number;
-    private y: number;
-    private thickness: number;
-    private color: string;  // New color property
-
-    constructor(x: number, y: number, thickness: number, color: string) {
-        this.x = x;
-        this.y = y;
-        this.thickness = thickness;
-        this.color = color;  // Initialize with the passed color
-    }
-
-    updatePosition(x: number, y: number) {
-        this.x = x;
-        this.y = y;
-    }
-
-    display(ctx: CanvasRenderingContext2D): void {
-        const previewSize = this.thickness * 4; // Make the preview 4 times the thickness
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, previewSize / 2, 0, Math.PI * 2);
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = this.color;  // Use the tool's color for the preview
-        ctx.stroke();
-        ctx.closePath();
-    }
-}
-
-class Emoji implements DisplayObject {
-    private x: number;
-    private y: number;
-    private emoji: string;
-
-    constructor(x: number, y: number, emoji: string) {
-        this.x = x;
-        this.y = y;
-        this.emoji = emoji;
-    }
-
-    updatePosition(x: number, y: number) {
-        this.x = x;
-        this.y = y;
-    }
-
-    display(ctx: CanvasRenderingContext2D): void {
-        ctx.font = "30px Arial";
-        ctx.fillText(this.emoji, this.x - 15, this.y + 10);  // Adjust the positioning to center
-    }
-}
 
 // ===================================
 // HELPER FUNCTIONS
