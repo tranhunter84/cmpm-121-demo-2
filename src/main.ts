@@ -156,6 +156,9 @@ function redraw() {
     paths.forEach((path) => {
         path.display(context);
     });
+    if(currentPath) {
+        currentPath?.display(context);
+    }
 
     if (!isDrawing && toolPreview) {
         toolPreview.display(context);
@@ -211,7 +214,6 @@ canvas.addEventListener("mousedown", (event) => {
     if (currentTool === "draw") {
         isDrawing = true;
         currentPath = createLineSegment(event.offsetX, event.offsetY, lineThickness);
-        toolPreview = null; // Hide tool preview while drawing
     } else if (currentTool === "sticker" && currentEmoji) {
         currentEmoji.updatePosition(event.offsetX, event.offsetY);
         paths.push(currentEmoji);
@@ -221,9 +223,7 @@ canvas.addEventListener("mousedown", (event) => {
 
 canvas.addEventListener("mousemove", (event) => {
     if (!isDrawing && currentTool === "draw") {
-        if (!toolPreview) {
-            toolPreview = createToolPreview(event.offsetX, event.offsetY, lineThickness);
-        } else {
+        if (toolPreview) {
             toolPreview.updatePosition(event.offsetX, event.offsetY);
         }
         canvas.dispatchEvent(new Event("tool-moved"));
@@ -276,12 +276,10 @@ clearButton.addEventListener("click", () => {
 });
 
 thinButton.addEventListener("click", () => {
-    const randomColor = `hsl(${Math.random() * 360}, 100%, 50%)`;  // Random color
     selectTool(thinButton, 2);  // Apply random color to the tool
 });
 
 thickButton.addEventListener("click", () => {
-    const randomColor = `hsl(${Math.random() * 360}, 100%, 50%)`;  // Random color
     selectTool(thickButton, 10);
 });
 
@@ -316,4 +314,4 @@ app.appendChild(thickButton);
 app.appendChild(createEmojiButton);
 app.appendChild(exportButton);
 
-toolPreview = createToolPreview(0, 0, lineThickness);   // Create the initial tool preview object when the app starts	
+selectTool(thinButton, 2); // Create the initial tool preview object when the app starts
